@@ -9,15 +9,40 @@ const documents = [
 
 function App() {
   const [files, setFiles] = useState({})
-  const [notice, setNotice] = useState(false)
+  const [requestState, setRequestState] = useState({ status: 'idle', message: '' })
 
   const selectFile = (event, id) => {
-    setFiles((current) => ({ ...current, [id]: event.target.files[0]?.name ?? '' }))
+    setFiles((current) => ({ ...current, [id]: event.target.files[0] }))
   }
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault()
-    setNotice(true)
+    setRequestState({ status: 'loading', message: '' })
+
+    const formData = new FormData(event.currentTarget)
+
+    try {
+      const response = await fetch('/api/analyses', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('요청을 처리하지 못했습니다.')
+      }
+
+      const result = await response.json()
+      const fileCount = result.receivedFiles.length
+      setRequestState({
+        status: 'success',
+        message: `분석 요청이 접수되었습니다. 첨부 문서 ${fileCount}개를 확인했습니다.`,
+      })
+    } catch {
+      setRequestState({
+        status: 'error',
+        message: '백엔드 서버에 연결할 수 없습니다. 서버 실행 상태를 확인해 주세요.',
+      })
+    }
   }
 
   return (
@@ -42,15 +67,15 @@ function App() {
               <div><span>01</span><h2>내 문서 올리기</h2></div>
               <em>모두 선택 사항</em>
             </div>
-            <p className="help">가지고 있는 문서만 올려주세요. PDF, DOC, DOCX 파일을 지원합니다.</p>
+            <p className="help">가지고 있는 문서만 올려주세요. PDF, DOC, DOCX 파일을 지원하며 파일당 최대 30MB입니다.</p>
             <div className="upload-grid">
               {documents.map(([id, label, description]) => (
                 <label className="upload-card" htmlFor={id} key={id}>
                   <span className="upload-icon">↑</span>
                   <strong>{label}</strong>
-                  <small>{files[id] || description}</small>
+                  <small>{files[id]?.name || description}</small>
                   <b>{files[id] ? '변경' : '파일 선택'}</b>
-                  <input id={id} type="file" accept=".pdf,.doc,.docx" onChange={(e) => selectFile(e, id)} />
+                  <input id={id} name={id} type="file" accept=".pdf,.doc,.docx" onChange={(e) => selectFile(e, id)} />
                 </label>
               ))}
             </div>
@@ -75,9 +100,16 @@ function App() {
           </section>
 
           <div className="submit-area">
-            <button type="submit">JobFit 분석하기 <span>→</span></button>
+            <button type="submit" disabled={requestState.status === 'loading'}>
+              {requestState.status === 'loading' ? '요청 전송 중...' : 'JobFit 분석하기'}
+              {requestState.status !== 'loading' && <span>→</span>}
+            </button>
             <p>입력한 문서는 분석 요청에만 사용됩니다.</p>
-            {notice && <div className="notice" role="status">입력 화면이 준비되었습니다. 다음 단계에서 AI 분석 기능을 연결합니다.</div>}
+            {requestState.message && (
+              <div className={`notice ${requestState.status}`} role="status">
+                {requestState.message}
+              </div>
+            )}
           </div>
         </form>
       </main>

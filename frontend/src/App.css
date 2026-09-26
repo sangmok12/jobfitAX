@@ -38,8 +38,10 @@ textarea:focus, input[type='url']:focus { border-color: var(--primary); outline:
 .submit-area { padding-top: 12px; text-align: center; }
 .submit-area button { width: 100%; height: 58px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: 14px; color: #fff; background: var(--primary); font: inherit; font-size: 16px; font-weight: 750; cursor: pointer; box-shadow: 0 12px 24px #464bd638; transition: .16s; }
 .submit-area button:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.submit-area button:disabled { background: #888cbd; cursor: wait; transform: none; box-shadow: none; }
 .submit-area > p { margin: 12px 0 0; color: var(--muted); font-size: 12px; }
 .notice { margin-top: 16px; padding: 13px 16px; border: 1px solid #cfd3f9; border-radius: 11px; color: #353a9c; background: var(--primary-soft); font-size: 13px; }
+.notice.error { border-color: #f0c7cd; color: #a02f42; background: #fff0f2; }
 footer { padding: 26px 0 36px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
 footer b { color: var(--ink); }
 @media (max-width: 720px) {
