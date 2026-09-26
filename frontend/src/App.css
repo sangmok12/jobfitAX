@@ -1,8 +1,59 @@
 .app-shell { min-height: 100vh; }
+body.opening-active { overflow: hidden; }
+.opening-scene { position: fixed; z-index: 2000; inset: 0; display: grid; place-items: center; overflow: hidden; color: white; background: linear-gradient(145deg, #171a54 0%, #3035a5 48%, #464bd6 100%); }
+.opening-scene::before { position: absolute; inset: 0; background-image: linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px); background-size: 44px 44px; content: ''; opacity: .5; mask-image: radial-gradient(circle at center, black, transparent 76%); }
+.opening-scene::after { width: 70vw; height: 70vw; position: absolute; top: 50%; left: 50%; border: 1px solid #ffffff13; border-radius: 50%; content: ''; transform: translate(-50%, -50%) scale(.4); animation: opening-ring 1.7s .2s cubic-bezier(.2,.8,.2,1) both; }
+.opening-backdrop { position: absolute; inset: 0; }
+.opening-backdrop::before, .opening-backdrop::after { width: 45vw; height: 45vw; position: absolute; border-radius: 50%; content: ''; filter: blur(80px); opacity: .22; }
+.opening-backdrop::before { top: -24vw; left: -10vw; background: #8d91ff; }
+.opening-backdrop::after { right: -12vw; bottom: -27vw; background: #70e8ba; }
+.opening-beam { width: 180vw; height: 1px; position: absolute; top: 50%; left: 50%; background: linear-gradient(90deg, transparent 20%, #fff 48%, #c6c9ff 52%, transparent 80%); box-shadow: 0 0 24px #c7c9ffb8; opacity: 0; }
+.beam-left { transform: translate(-50%, -50%) rotate(39deg); animation: beam-reveal .9s .18s ease-out forwards; }
+.beam-right { transform: translate(-50%, -50%) rotate(-39deg); animation: beam-reveal .9s .34s ease-out forwards; }
+.opening-orbit { width: 310px; height: 310px; position: absolute; top: 50%; left: 50%; border: 1px solid #ffffff28; border-radius: 50%; transform: translate(-50%, -50%) scale(.65); animation: orbit-reveal 1.2s .45s cubic-bezier(.2,.8,.2,1) both; }
+.opening-orbit::before, .opening-orbit::after { position: absolute; border: 1px solid #ffffff1f; border-radius: 50%; content: ''; }
+.opening-orbit::before { inset: 30px; }
+.opening-orbit::after { inset: 68px; }
+.opening-content { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.opening-logo-wrap { width: 112px; height: 112px; position: relative; display: grid; place-items: center; opacity: 0; transform: scale(.55) rotate(-7deg); animation: logo-arrive .85s .52s cubic-bezier(.16,1,.3,1) forwards; }
+.opening-logo-wrap img { width: 96px; height: 96px; position: relative; z-index: 2; border: 1px solid #ffffff2e; border-radius: 21px; box-shadow: 0 24px 70px #10123e80; }
+.opening-logo-glow { position: absolute; inset: 0; border-radius: 32px; background: #9ca0ff6b; filter: blur(24px); animation: glow-pulse 1.8s 1s ease-in-out infinite; }
+.opening-wordmark { margin-top: 24px; font-size: clamp(34px, 6vw, 50px); font-weight: 800; letter-spacing: -.055em; opacity: 0; transform: translateY(12px); animation: opening-copy .65s 1.05s ease-out forwards; }
+.opening-wordmark strong { color: #9ff0cb; }
+.opening-content p { margin: 10px 0 0; color: #e6e7ff; font-size: 14px; letter-spacing: .04em; opacity: 0; transform: translateY(9px); animation: opening-copy .6s 1.28s ease-out forwards; }
+.opening-progress { width: 150px; height: 2px; margin-top: 30px; overflow: hidden; border-radius: 2px; background: #ffffff24; opacity: 0; animation: progress-show .2s 1.45s forwards; }
+.opening-progress span { height: 100%; display: block; border-radius: inherit; background: linear-gradient(90deg, #fff, #9ff0cb); transform: translateX(-100%); animation: progress-fill .75s 1.52s cubic-bezier(.65,0,.35,1) forwards; }
+.opening-scene.is-leaving { pointer-events: none; animation: opening-exit .72s cubic-bezier(.76,0,.24,1) forwards; }
+.opening-scene.is-leaving .opening-content { animation: content-exit .48s ease-in forwards; }
+@keyframes opening-ring { from { opacity: 0; transform: translate(-50%, -50%) scale(.3); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes beam-reveal { 0% { opacity: 0; clip-path: inset(0 50%); } 45% { opacity: .7; } 100% { opacity: .12; clip-path: inset(0 0); } }
+@keyframes orbit-reveal { from { opacity: 0; transform: translate(-50%, -50%) scale(.65) rotate(-30deg); } to { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); } }
+@keyframes logo-arrive { to { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes glow-pulse { 50% { opacity: .55; transform: scale(1.16); } }
+@keyframes opening-copy { to { opacity: 1; transform: translateY(0); } }
+@keyframes progress-show { to { opacity: 1; } }
+@keyframes progress-fill { to { transform: translateX(0); } }
+@keyframes content-exit { to { opacity: 0; transform: scale(.92); } }
+@keyframes opening-exit { 0% { opacity: 1; clip-path: inset(0); } 100% { opacity: 0; clip-path: inset(50% 0); } }
+.loading-scene { position: fixed; z-index: 1800; inset: 0; display: grid; place-items: center; padding: 24px; background: #f5f6fbd9; backdrop-filter: blur(14px); animation: loading-fade-in .25s ease-out both; }
+.loading-card { width: min(520px, 100%); padding: 64px 30px 54px; position: relative; overflow: hidden; border: 1px solid #dde0f1; border-radius: 30px; background: #ffffffed; box-shadow: 0 30px 90px #242a6824; text-align: center; }
+.loading-card::before { width: 330px; height: 170px; position: absolute; top: -112px; left: 50%; border-radius: 50%; background: #7076ec29; content: ''; filter: blur(36px); transform: translateX(-50%); }
+.loading-brand { position: relative; color: var(--ink); font-size: clamp(38px, 7vw, 54px); font-weight: 800; letter-spacing: -.06em; line-height: 1; }
+.loading-brand strong { color: var(--primary); font-weight: 800; }
+.loading-light { width: 170px; height: 2px; margin: 27px auto 0; position: relative; display: block; overflow: hidden; border-radius: 2px; background: #e3e4f0; }
+.loading-light::after { width: 65px; position: absolute; inset: 0 auto 0 -65px; background: linear-gradient(90deg, transparent, var(--primary), #62dba7, transparent); content: ''; animation: loading-light-pass 1.8s ease-in-out infinite; }
+.loading-card p { margin: 22px 0 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+.loading-dots { width: 18px; display: inline-flex; }
+.loading-dots i { font-style: normal; opacity: .18; animation: loading-dot 1.35s ease-in-out infinite; }
+.loading-dots i:nth-child(2) { animation-delay: .18s; }
+.loading-dots i:nth-child(3) { animation-delay: .36s; }
+@keyframes loading-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes loading-light-pass { 55%, 100% { left: calc(100% + 65px); } }
+@keyframes loading-dot { 0%, 60%, 100% { opacity: .18; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-2px); } }
 header, footer { width: min(1120px, calc(100% - 48px)); margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
 header { height: 76px; border-bottom: 1px solid var(--border); }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); font-size: 20px; font-weight: 800; letter-spacing: -.04em; text-decoration: none; }
-.brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: white; background: var(--primary); box-shadow: 0 8px 20px #464bd638; }
+.brand-logo { width: 36px; height: 36px; display: block; filter: drop-shadow(0 8px 10px #464bd62e); }
 .badge, .section-title em { padding: 5px 10px; border-radius: 99px; color: var(--primary); background: var(--primary-soft); font-size: 12px; font-style: normal; font-weight: 700; }
 main { width: min(900px, calc(100% - 48px)); margin: 0 auto; padding: 76px 0 96px; }
 .intro { max-width: 760px; margin-bottom: 52px; }
@@ -94,4 +145,8 @@ footer b { color: var(--ink); }
   .text-comparison { grid-template-columns: 1fr; }
   .text-comparison pre { height: 280px; }
   footer { gap: 12px; flex-direction: column; align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opening-scene *, .opening-scene::before, .opening-scene::after { animation-duration: .01ms !important; animation-delay: 0ms !important; }
+  .loading-scene *, .loading-scene::before, .loading-scene::after { animation-duration: .01ms !important; animation-delay: 0ms !important; }
 }

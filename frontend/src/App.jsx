@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
 const MAX_FILES = 10
@@ -6,13 +6,66 @@ const MAX_URLS = 10
 const MAX_FILE_SIZE = 30 * 1024 * 1024
 const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'txt', 'md']
 
+function OpeningScene({ leaving }) {
+  return (
+    <div className={`opening-scene${leaving ? ' is-leaving' : ''}`} aria-label="JobFit AX 시작 화면">
+      <div className="opening-backdrop" aria-hidden="true">
+        <span className="opening-beam beam-left" />
+        <span className="opening-beam beam-right" />
+        <span className="opening-orbit" />
+      </div>
+      <div className="opening-content">
+        <div className="opening-logo-wrap">
+          <span className="opening-logo-glow" />
+          <img src="/jobfit-logo.svg" alt="" />
+        </div>
+        <div className="opening-wordmark">JobFit <strong>AX</strong></div>
+        <p>나의 경험과 더 좋은 기회가 만나는 순간</p>
+        <div className="opening-progress" aria-hidden="true"><span /></div>
+      </div>
+    </div>
+  )
+}
+
+function LoadingScene() {
+  return (
+    <div className="loading-scene" role="status" aria-live="polite">
+      <div className="loading-card">
+        <div className="loading-brand" aria-label="JobFit AX">JobFit <strong>AX</strong></div>
+        <span className="loading-light" aria-hidden="true" />
+        <p>
+          당신이 빛날 순간을 발견하고 있어요
+          <span className="loading-dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span>
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function App() {
+  const [openingState, setOpeningState] = useState('showing')
   const [files, setFiles] = useState([])
   const [sourceUrls, setSourceUrls] = useState([])
   const [urlDraft, setUrlDraft] = useState('')
   const [extractedSources, setExtractedSources] = useState([])
   const [extractedUrls, setExtractedUrls] = useState([])
   const [requestState, setRequestState] = useState({ status: 'idle', message: '' })
+
+  useEffect(() => {
+    document.body.classList.add('opening-active')
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const leaveTimer = window.setTimeout(() => setOpeningState('leaving'), reduceMotion ? 350 : 2300)
+    const finishTimer = window.setTimeout(() => {
+      setOpeningState('hidden')
+      document.body.classList.remove('opening-active')
+    }, reduceMotion ? 550 : 3000)
+
+    return () => {
+      window.clearTimeout(leaveTimer)
+      window.clearTimeout(finishTimer)
+      document.body.classList.remove('opening-active')
+    }
+  }, [])
 
   const selectFiles = (event) => {
     const selected = Array.from(event.target.files)
@@ -102,9 +155,11 @@ function App() {
 
   return (
     <div className="app-shell">
+      {openingState !== 'hidden' && <OpeningScene leaving={openingState === 'leaving'} />}
+      {requestState.status === 'loading' && <LoadingScene />}
       <header>
         <a className="brand" href="/" aria-label="JobFit AX 홈">
-          <span className="brand-mark">J</span> JobFit AX
+          <img className="brand-logo" src="/jobfit-logo.svg" alt="" /> JobFit AX
         </a>
         <span className="badge">V1</span>
       </header>
