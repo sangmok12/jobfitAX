@@ -20,6 +20,10 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.apache.tika:tika-core:3.3.2'
+	implementation 'org.apache.tika:tika-parsers-standard-package:3.3.2'
+	implementation 'org.jsoup:jsoup:1.23.2'
+	implementation 'com.microsoft.playwright:playwright:1.63.0'
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -27,4 +31,12 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+tasks.register('playwrightInstall', JavaExec) {
+	group = 'application'
+	description = 'Installs the Chromium browser used for JavaScript-rendered pages.'
+	classpath = sourceSets.main.runtimeClasspath
+	mainClass = 'com.microsoft.playwright.CLI'
+	args 'install', 'chromium'
 }

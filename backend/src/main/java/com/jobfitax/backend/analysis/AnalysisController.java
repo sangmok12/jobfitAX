@@ -15,6 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.jobfitax.backend.analysis.source.DocumentTextExtractor;
+import com.jobfitax.backend.analysis.source.SourceExtractionResult;
+import com.jobfitax.backend.analysis.source.UrlExtractionResult;
+import com.jobfitax.backend.analysis.source.WebPageTextExtractor;
+
 @RestController
 @RequestMapping("/api/analyses")
 public class AnalysisController {
@@ -28,6 +33,17 @@ public class AnalysisController {
             "text/markdown",
             "application/octet-stream"
     );
+
+    private final DocumentTextExtractor documentTextExtractor;
+    private final WebPageTextExtractor webPageTextExtractor;
+
+    public AnalysisController(
+            DocumentTextExtractor documentTextExtractor,
+            WebPageTextExtractor webPageTextExtractor
+    ) {
+        this.documentTextExtractor = documentTextExtractor;
+        this.webPageTextExtractor = webPageTextExtractor;
+    }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public AnalysisRequestResponse receiveAnalysisRequest(
@@ -51,7 +67,17 @@ public class AnalysisController {
                 .map(StringUtils::cleanPath)
                 .toList();
 
-        return new AnalysisRequestResponse("RECEIVED", jobPostingUrl, receivedFiles, safeSourceUrls);
+        List<SourceExtractionResult> extractedSources = safeFiles.stream()
+                .map(documentTextExtractor::extract)
+                .toList();
+        List<UrlExtractionResult> extractedUrls = safeSourceUrls.stream()
+                .map(webPageTextExtractor::extract)
+                .toList();
+
+        return new AnalysisRequestResponse(
+                "RECEIVED", jobPostingUrl, receivedFiles, safeSourceUrls,
+                extractedSources, extractedUrls
+        );
     }
 
     private void validateSourceCount(List<MultipartFile> files, List<String> sourceUrls) {

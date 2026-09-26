@@ -10,6 +10,8 @@ function App() {
   const [files, setFiles] = useState([])
   const [sourceUrls, setSourceUrls] = useState([])
   const [urlDraft, setUrlDraft] = useState('')
+  const [extractedSources, setExtractedSources] = useState([])
+  const [extractedUrls, setExtractedUrls] = useState([])
   const [requestState, setRequestState] = useState({ status: 'idle', message: '' })
 
   const selectFiles = (event) => {
@@ -61,6 +63,8 @@ function App() {
   const submit = async (event) => {
     event.preventDefault()
     setRequestState({ status: 'loading', message: '' })
+    setExtractedSources([])
+    setExtractedUrls([])
 
     const values = new FormData(event.currentTarget)
     const formData = new FormData()
@@ -82,6 +86,8 @@ function App() {
       const result = await response.json()
       const fileCount = result.receivedFiles.length
       const urlCount = result.receivedUrls.length
+      setExtractedSources(result.extractedSources)
+      setExtractedUrls(result.extractedUrls)
       setRequestState({
         status: 'success',
         message: `분석 요청이 접수되었습니다. 파일 ${fileCount}개와 URL ${urlCount}개를 확인했습니다.`,
@@ -179,6 +185,123 @@ function App() {
             )}
           </div>
         </form>
+
+        {(extractedSources.length > 0 || extractedUrls.length > 0) && (
+          <section className="extraction-results" aria-labelledby="extraction-title">
+            <div className="results-heading">
+              <div>
+                <span className="eyebrow">SOURCE INSPECTION</span>
+                <h2 id="extraction-title">AI에 전달할 사용자 자료</h2>
+              </div>
+              <span>{extractedSources.length + extractedUrls.length}개 자료</span>
+            </div>
+            <p className="results-description">
+              지금은 AI를 호출하지 않았습니다. 아래 정제 결과가 이후 AI 분석에 사용될 내용입니다.
+            </p>
+
+            <div className="extraction-list">
+              {extractedSources.map((source) => (
+                <article className="extraction-card" key={source.sourceName}>
+                  <div className="extraction-summary">
+                    <div>
+                      <span className={`status-dot ${source.status.toLowerCase()}`} />
+                      <strong>{source.sourceName}</strong>
+                    </div>
+                    <span className="status-label">
+                      {source.status === 'SUCCESS' ? '추출 완료' : source.status === 'NO_TEXT' ? '텍스트 없음' : '추출 실패'}
+                    </span>
+                  </div>
+
+                  {source.status === 'SUCCESS' ? (
+                    <>
+                      <div className="extraction-stats">
+                        <div><span>원문</span><strong>{source.rawCharacterCount.toLocaleString()}자</strong></div>
+                        <div><span>기본 정제 후</span><strong>{source.cleanedCharacterCount.toLocaleString()}자</strong></div>
+                        <div><span>AI 전달 대상</span><strong>{source.analysisCharacterCount.toLocaleString()}자</strong></div>
+                        <div><span>기본 정제 제외</span><strong>{source.removedCharacterCount.toLocaleString()}자</strong></div>
+                        <div><span>길이 제한 제외</span><strong>{source.truncatedCharacterCount.toLocaleString()}자</strong></div>
+                      </div>
+                      <div className="rule-list">
+                        {source.appliedRules.length > 0
+                          ? source.appliedRules.map((rule) => <span key={rule}>✓ {rule}</span>)
+                          : <span>별도 정제 없음</span>}
+                      </div>
+                      <details>
+                        <summary>정제 내용 상세보기</summary>
+                        <div className="text-comparison">
+                          <div>
+                            <h3>추출 원문</h3>
+                            <pre>{source.rawText}</pre>
+                          </div>
+                          <div>
+                            <h3>정제 후 · AI 전달 내용</h3>
+                            <pre>{source.normalizedText}</pre>
+                          </div>
+                        </div>
+                      </details>
+                    </>
+                  ) : (
+                    <p className="extraction-error">{source.errorMessage}</p>
+                  )}
+                </article>
+              ))}
+              {extractedUrls.map((source) => (
+                <article className="extraction-card" key={source.sourceUrl}>
+                  <div className="extraction-summary">
+                    <div>
+                      <span className={`status-dot ${source.status.toLowerCase()}`} />
+                      <strong>{source.pageTitle || source.sourceUrl}</strong>
+                    </div>
+                    <span className="status-label">
+                      {source.status === 'SUCCESS'
+                        ? '본문 추출 완료'
+                        : source.status === 'BLOCKED'
+                          ? '접근 차단'
+                          : source.status === 'AUTH_REQUIRED'
+                            ? '공개 설정 필요'
+                            : '추출 실패'}
+                    </span>
+                  </div>
+                  <a className="source-url" href={source.finalUrl} target="_blank" rel="noreferrer">{source.finalUrl}</a>
+
+                  {source.status === 'SUCCESS' ? (
+                    <>
+                      <div className="extraction-stats">
+                        <div><span>페이지 전체</span><strong>{source.rawCharacterCount.toLocaleString()}자</strong></div>
+                        <div><span>본문 추출 후</span><strong>{source.cleanedCharacterCount.toLocaleString()}자</strong></div>
+                        <div><span>AI 전달 대상</span><strong>{source.analysisCharacterCount.toLocaleString()}자</strong></div>
+                        <div><span>비본문 제외</span><strong>{source.excludedCharacterCount.toLocaleString()}자</strong></div>
+                        <div><span>길이 제한 제외</span><strong>{source.truncatedCharacterCount.toLocaleString()}자</strong></div>
+                      </div>
+                      <div className="rule-list">
+                        {source.removalStats.length > 0
+                          ? source.removalStats.map((stat) => (
+                            <span key={stat.category}>✓ {stat.category} {stat.characterCount.toLocaleString()}자</span>
+                          ))
+                          : <span>명확한 비본문 영역 없음</span>}
+                      </div>
+                      <details>
+                        <summary>정제 내용 상세보기</summary>
+                        <div className="text-comparison">
+                          <div>
+                            <h3>페이지 전체 표시 텍스트</h3>
+                            <pre>{source.rawText}</pre>
+                          </div>
+                          <div>
+                            <h3>핵심 본문 · AI 전달 내용</h3>
+                            <pre>{source.normalizedText}</pre>
+                          </div>
+                        </div>
+                      </details>
+                    </>
+                  ) : (
+                    <p className="extraction-error">{source.errorMessage}</p>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <footer><b>JobFit AX</b><span>나에게 맞는 일을 더 선명하게</span></footer>
