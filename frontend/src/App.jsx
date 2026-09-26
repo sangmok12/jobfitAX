@@ -1,25 +1,73 @@
 import { useState } from 'react'
 import './App.css'
 
-const documents = [
-  ['resume', '이력서', '현재 경력과 기술을 확인할 수 있는 문서'],
-  ['career', '경력기술서', '프로젝트와 담당 업무를 자세히 적은 문서'],
-  ['portfolio', '포트폴리오', '작업 결과와 경험을 보여주는 문서'],
-]
+const MAX_FILES = 10
+const MAX_URLS = 10
+const MAX_FILE_SIZE = 30 * 1024 * 1024
+const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'txt', 'md']
 
 function App() {
-  const [files, setFiles] = useState({})
+  const [files, setFiles] = useState([])
+  const [sourceUrls, setSourceUrls] = useState([])
+  const [urlDraft, setUrlDraft] = useState('')
   const [requestState, setRequestState] = useState({ status: 'idle', message: '' })
 
-  const selectFile = (event, id) => {
-    setFiles((current) => ({ ...current, [id]: event.target.files[0] }))
+  const selectFiles = (event) => {
+    const selected = Array.from(event.target.files)
+    const invalid = selected.find((file) => {
+      const extension = file.name.split('.').pop()?.toLowerCase()
+      return !ALLOWED_EXTENSIONS.includes(extension) || file.size > MAX_FILE_SIZE
+    })
+
+    if (invalid) {
+      setRequestState({ status: 'error', message: 'PDF, DOCX, TXT, MD 형식의 30MB 이하 파일만 추가할 수 있습니다.' })
+      event.target.value = ''
+      return
+    }
+
+    setFiles((current) => {
+      const unique = [...current, ...selected].filter((file, index, list) =>
+        list.findIndex((item) => item.name === file.name && item.size === file.size) === index)
+      if (unique.length > MAX_FILES) {
+        setRequestState({ status: 'error', message: '파일은 최대 10개까지 추가할 수 있습니다.' })
+        return current
+      }
+      setRequestState({ status: 'idle', message: '' })
+      return unique
+    })
+    event.target.value = ''
+  }
+
+  const addSourceUrl = () => {
+    const value = urlDraft.trim()
+    try {
+      const url = new URL(value)
+      if (!['http:', 'https:'].includes(url.protocol)) throw new Error()
+    } catch {
+      setRequestState({ status: 'error', message: 'http 또는 https로 시작하는 올바른 URL을 입력해 주세요.' })
+      return
+    }
+
+    if (sourceUrls.length >= MAX_URLS) {
+      setRequestState({ status: 'error', message: 'URL은 최대 10개까지 추가할 수 있습니다.' })
+      return
+    }
+
+    setSourceUrls((current) => current.includes(value) ? current : [...current, value])
+    setUrlDraft('')
+    setRequestState({ status: 'idle', message: '' })
   }
 
   const submit = async (event) => {
     event.preventDefault()
     setRequestState({ status: 'loading', message: '' })
 
-    const formData = new FormData(event.currentTarget)
+    const values = new FormData(event.currentTarget)
+    const formData = new FormData()
+    files.forEach((file) => formData.append('files', file))
+    sourceUrls.forEach((url) => formData.append('sourceUrls', url))
+    formData.append('preferences', values.get('preferences'))
+    formData.append('jobPostingUrl', values.get('jobPostingUrl'))
 
     try {
       const response = await fetch('/api/analyses', {
@@ -33,9 +81,10 @@ function App() {
 
       const result = await response.json()
       const fileCount = result.receivedFiles.length
+      const urlCount = result.receivedUrls.length
       setRequestState({
         status: 'success',
-        message: `분석 요청이 접수되었습니다. 첨부 문서 ${fileCount}개를 확인했습니다.`,
+        message: `분석 요청이 접수되었습니다. 파일 ${fileCount}개와 URL ${urlCount}개를 확인했습니다.`,
       })
     } catch {
       setRequestState({
@@ -64,21 +113,39 @@ function App() {
         <form onSubmit={submit}>
           <section className="form-card">
             <div className="section-title">
-              <div><span>01</span><h2>내 문서 올리기</h2></div>
+              <div><span>01</span><h2>내 자료 추가하기</h2></div>
               <em>모두 선택 사항</em>
             </div>
-            <p className="help">가지고 있는 문서만 올려주세요. PDF, DOC, DOCX 파일을 지원하며 파일당 최대 30MB입니다.</p>
-            <div className="upload-grid">
-              {documents.map(([id, label, description]) => (
-                <label className="upload-card" htmlFor={id} key={id}>
-                  <span className="upload-icon">↑</span>
-                  <strong>{label}</strong>
-                  <small>{files[id]?.name || description}</small>
-                  <b>{files[id] ? '변경' : '파일 선택'}</b>
-                  <input id={id} name={id} type="file" accept=".pdf,.doc,.docx" onChange={(e) => selectFile(e, id)} />
-                </label>
-              ))}
+            <div className="source-guide">
+              <p><strong>지원 파일</strong> PDF, DOCX, TXT, MD · 파일당 최대 30MB · 최대 10개</p>
+              <p><strong>URL 안내</strong> 로그인이나 권한 제한 없이 누구나 볼 수 있는 전체 공개 페이지를 입력해 주세요.</p>
             </div>
+
+            <div className="source-actions">
+              <label className="file-button" htmlFor="sourceFiles">＋ 파일 추가</label>
+              <input id="sourceFiles" className="hidden-file-input" type="file" multiple accept=".pdf,.docx,.txt,.md" onChange={selectFiles} />
+              <div className="url-add">
+                <input type="url" value={urlDraft} onChange={(event) => setUrlDraft(event.target.value)} placeholder="https://공개된-포트폴리오-주소" />
+                <button type="button" onClick={addSourceUrl}>URL 추가</button>
+              </div>
+            </div>
+
+            {(files.length > 0 || sourceUrls.length > 0) && (
+              <div className="source-list">
+                {files.map((file) => (
+                  <div className="source-item" key={`${file.name}-${file.size}`}>
+                    <span className="source-type">FILE</span><span>{file.name}</span>
+                    <button type="button" onClick={() => setFiles((current) => current.filter((item) => item !== file))} aria-label={`${file.name} 삭제`}>×</button>
+                  </div>
+                ))}
+                {sourceUrls.map((url) => (
+                  <div className="source-item" key={url}>
+                    <span className="source-type">URL</span><span>{url}</span>
+                    <button type="button" onClick={() => setSourceUrls((current) => current.filter((item) => item !== url))} aria-label={`${url} 삭제`}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="form-card">

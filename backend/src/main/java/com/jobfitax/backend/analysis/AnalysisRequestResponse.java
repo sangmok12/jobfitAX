@@ -5,6 +5,7 @@ import java.util.List;
 public record AnalysisRequestResponse(
         String status,
         String jobPostingUrl,
-        List<String> receivedFiles
+        List<String> receivedFiles,
+        List<String> receivedUrls
 ) {
 }
