@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Java / Gradle
+.gradle/
+**/build/
+
+# React / Node.js
+**/node_modules/
+**/dist/
+**/.env
+**/.env.local
+
+# Logs
+*.log
