@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.jobfitax.backend.analysis.job.JobPostingExtractionResult;
+import com.jobfitax.backend.analysis.job.JobPostingTextExtractor;
 import com.jobfitax.backend.analysis.source.DocumentTextExtractor;
 import com.jobfitax.backend.analysis.source.SourceExtractionResult;
 import com.jobfitax.backend.analysis.source.UrlExtractionResult;
@@ -36,13 +38,16 @@ public class AnalysisController {
 
     private final DocumentTextExtractor documentTextExtractor;
     private final WebPageTextExtractor webPageTextExtractor;
+    private final JobPostingTextExtractor jobPostingTextExtractor;
 
     public AnalysisController(
             DocumentTextExtractor documentTextExtractor,
-            WebPageTextExtractor webPageTextExtractor
+            WebPageTextExtractor webPageTextExtractor,
+            JobPostingTextExtractor jobPostingTextExtractor
     ) {
         this.documentTextExtractor = documentTextExtractor;
         this.webPageTextExtractor = webPageTextExtractor;
+        this.jobPostingTextExtractor = jobPostingTextExtractor;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -73,9 +78,10 @@ public class AnalysisController {
         List<UrlExtractionResult> extractedUrls = safeSourceUrls.stream()
                 .map(webPageTextExtractor::extract)
                 .toList();
+        JobPostingExtractionResult jobPosting = jobPostingTextExtractor.extract(jobPostingUrl);
 
         return new AnalysisRequestResponse(
-                "RECEIVED", jobPostingUrl, receivedFiles, safeSourceUrls,
+                "RECEIVED", jobPostingUrl, jobPosting, receivedFiles, safeSourceUrls,
                 extractedSources, extractedUrls
         );
     }

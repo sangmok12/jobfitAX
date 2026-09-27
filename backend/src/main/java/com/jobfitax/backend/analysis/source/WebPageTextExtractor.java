@@ -68,21 +68,49 @@ public class WebPageTextExtractor {
     }
 
     public UrlExtractionResult extract(String sourceUrl) {
+        return extract(sourceUrl, List.of());
+    }
+
+    public UrlExtractionResult extract(String sourceUrl, List<String> preferredContentSelectors) {
+        return extractDetailed(sourceUrl, preferredContentSelectors).extraction();
+    }
+
+    public WebPageExtraction extractDetailed(String sourceUrl, List<String> preferredContentSelectors) {
+        try {
+            RenderedWebPageFetcher.RenderedPage renderedPage = renderedWebPageFetcher.fetch(sourceUrl);
+            UrlExtractionResult renderedResult = extractContent(
+                    sourceUrl,
+                    new FetchedPage(renderedPage.uri(), renderedPage.html()),
+                    preferredContentSelectors
+            );
+            if (!"NO_TEXT".equals(renderedResult.status())) {
+                return new WebPageExtraction(renderedResult, renderedPage.frames());
+            }
+        } catch (IllegalArgumentException exception) {
+            return new WebPageExtraction(
+                    failed(sourceUrl, "BLOCKED", exception.getMessage()),
+                    List.of()
+            );
+        } catch (Exception exception) {
+            log.info("Browser rendering failed; retrying with static HTML");
+        }
+
         try {
             FetchedPage fetchedPage = fetch(sourceUrl);
-            UrlExtractionResult initialResult = extractContent(sourceUrl, fetchedPage);
-            if (!("NO_TEXT".equals(initialResult.status())
-                    || "AUTH_REQUIRED".equals(initialResult.status()))) {
-                return initialResult;
-            }
-
-            log.info("Static HTML had insufficient text; retrying with browser rendering");
-            RenderedWebPageFetcher.RenderedPage renderedPage = renderedWebPageFetcher.fetch(sourceUrl);
-            return extractContent(sourceUrl, new FetchedPage(renderedPage.uri(), renderedPage.html()));
+            return new WebPageExtraction(
+                    extractContent(sourceUrl, fetchedPage, preferredContentSelectors),
+                    List.of()
+            );
         } catch (IllegalArgumentException exception) {
-            return failed(sourceUrl, "BLOCKED", exception.getMessage());
+            return new WebPageExtraction(
+                    failed(sourceUrl, "BLOCKED", exception.getMessage()),
+                    List.of()
+            );
         } catch (Exception exception) {
-            return failed(sourceUrl, "FAILED", "공개 페이지 내용을 가져오지 못했습니다.");
+            return new WebPageExtraction(
+                    failed(sourceUrl, "FAILED", "공개 페이지 내용을 가져오지 못했습니다."),
+                    List.of()
+            );
         }
     }
 
@@ -134,7 +162,11 @@ public class WebPageTextExtractor {
         throw new IOException("리다이렉트 횟수가 너무 많습니다.");
     }
 
-    private UrlExtractionResult extractContent(String sourceUrl, FetchedPage fetchedPage) {
+    private UrlExtractionResult extractContent(
+            String sourceUrl,
+            FetchedPage fetchedPage,
+            List<String> preferredContentSelectors
+    ) {
         Document document = Jsoup.parse(fetchedPage.html(), fetchedPage.uri().toString());
         log.info(
                 "Public URL received: htmlCharacters={}, visibleCharacters={}",
@@ -148,7 +180,7 @@ public class WebPageTextExtractor {
         String rawText = renderText(document.body());
         Document cleanedDocument = document.clone();
         Map<String, Integer> removedByCategory = removeNoise(cleanedDocument);
-        Element mainContent = selectMainContent(cleanedDocument);
+        Element mainContent = selectMainContent(cleanedDocument, preferredContentSelectors);
         String selectedText = renderText(mainContent);
         NormalizationResult normalized = textNormalizer.normalize(selectedText);
 
@@ -218,7 +250,17 @@ public class WebPageTextExtractor {
         return removed;
     }
 
-    private Element selectMainContent(Document document) {
+    private Element selectMainContent(Document document, List<String> preferredContentSelectors) {
+        if (preferredContentSelectors != null && !preferredContentSelectors.isEmpty()) {
+            Element preferred = document.select(String.join(", ", preferredContentSelectors)).stream()
+                    .filter(element -> element.text().length() >= 100)
+                    .max(Comparator.comparingDouble(this::contentScore))
+                    .orElse(null);
+            if (preferred != null) {
+                return preferred;
+            }
+        }
+
         List<Element> semanticCandidates = document.select("main, article, [role=main]");
         Element semantic = semanticCandidates.stream()
                 .filter(element -> element.text().length() >= 100)
@@ -261,5 +303,11 @@ public class WebPageTextExtractor {
     }
 
     private record FetchedPage(URI uri, String html) {
+    }
+
+    public record WebPageExtraction(
+            UrlExtractionResult extraction,
+            List<RenderedWebPageFetcher.RenderedFrame> frames
+    ) {
     }
 }

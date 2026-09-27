@@ -42,6 +42,83 @@ function LoadingScene() {
   )
 }
 
+function UrlExtractionCard({ source, siteName, officiallySupported, ocr }) {
+  return (
+    <article className="extraction-card">
+      <div className="extraction-summary">
+        <div>
+          <span className={`status-dot ${source.status.toLowerCase()}`} />
+          <strong>{source.pageTitle || source.sourceUrl}</strong>
+        </div>
+        <span className="status-label">
+          {source.status === 'SUCCESS'
+            ? '본문 추출 완료'
+            : source.status === 'BLOCKED'
+              ? '접근 차단'
+              : source.status === 'AUTH_REQUIRED'
+                ? '공개 설정 필요'
+                : '추출 실패'}
+        </span>
+      </div>
+      {siteName && (
+        <div className="site-labels">
+          <span>{siteName}</span>
+          <span className={officiallySupported ? 'supported' : ''}>
+            {officiallySupported ? '지원 사이트' : '범용 분석'}
+          </span>
+        </div>
+      )}
+      {ocr && (
+        <div className={`ocr-notice ${ocr.status.toLowerCase()}`}>
+          <strong>
+            {ocr.status === 'SUCCESS'
+              ? `상세 이미지 OCR ${ocr.includedImageCount}개 · ${ocr.characterCount.toLocaleString()}자`
+              : ocr.status === 'FRAME_TEXT'
+                ? `상세공고 HTML · ${ocr.characterCount.toLocaleString()}자`
+              : ocr.status === 'LOW_QUALITY' ? '상세 이미지 OCR 확인 필요' : '상세 이미지 없음'}
+          </strong>
+          <span>{ocr.message}</span>
+        </div>
+      )}
+      <a className="source-url" href={source.finalUrl} target="_blank" rel="noreferrer">{source.finalUrl}</a>
+
+      {source.status === 'SUCCESS' ? (
+        <>
+          <div className="extraction-stats">
+            <div><span>페이지 전체</span><strong>{source.rawCharacterCount.toLocaleString()}자</strong></div>
+            <div><span>본문 추출 후</span><strong>{source.cleanedCharacterCount.toLocaleString()}자</strong></div>
+            <div><span>AI 전달 대상</span><strong>{source.analysisCharacterCount.toLocaleString()}자</strong></div>
+            <div><span>비본문 제외</span><strong>{source.excludedCharacterCount.toLocaleString()}자</strong></div>
+            <div><span>길이 제한 제외</span><strong>{source.truncatedCharacterCount.toLocaleString()}자</strong></div>
+          </div>
+          <div className="rule-list">
+            {source.removalStats.length > 0
+              ? source.removalStats.map((stat) => (
+                <span key={stat.category}>✓ {stat.category} {stat.characterCount.toLocaleString()}자</span>
+              ))
+              : <span>명확한 비본문 영역 없음</span>}
+          </div>
+          <details>
+            <summary>정제 내용 상세보기</summary>
+            <div className="text-comparison">
+              <div>
+                <h3>페이지 전체 표시 텍스트</h3>
+                <pre>{source.rawText}</pre>
+              </div>
+              <div>
+                <h3>핵심 본문 · AI 전달 내용</h3>
+                <pre>{source.normalizedText}</pre>
+              </div>
+            </div>
+          </details>
+        </>
+      ) : (
+        <p className="extraction-error">{source.errorMessage}</p>
+      )}
+    </article>
+  )
+}
+
 function App() {
   const [openingState, setOpeningState] = useState('showing')
   const [files, setFiles] = useState([])
@@ -49,7 +126,10 @@ function App() {
   const [urlDraft, setUrlDraft] = useState('')
   const [extractedSources, setExtractedSources] = useState([])
   const [extractedUrls, setExtractedUrls] = useState([])
+  const [jobPosting, setJobPosting] = useState(null)
+  const [preferences, setPreferences] = useState('')
   const [requestState, setRequestState] = useState({ status: 'idle', message: '' })
+  const hasUserMaterials = files.length > 0 || sourceUrls.length > 0 || preferences.trim().length > 0
 
   useEffect(() => {
     document.body.classList.add('opening-active')
@@ -118,12 +198,13 @@ function App() {
     setRequestState({ status: 'loading', message: '' })
     setExtractedSources([])
     setExtractedUrls([])
+    setJobPosting(null)
 
     const values = new FormData(event.currentTarget)
     const formData = new FormData()
     files.forEach((file) => formData.append('files', file))
     sourceUrls.forEach((url) => formData.append('sourceUrls', url))
-    formData.append('preferences', values.get('preferences'))
+    formData.append('preferences', preferences)
     formData.append('jobPostingUrl', values.get('jobPostingUrl'))
 
     try {
@@ -141,9 +222,12 @@ function App() {
       const urlCount = result.receivedUrls.length
       setExtractedSources(result.extractedSources)
       setExtractedUrls(result.extractedUrls)
+      setJobPosting(result.jobPosting)
       setRequestState({
         status: 'success',
-        message: `분석 요청이 접수되었습니다. 파일 ${fileCount}개와 URL ${urlCount}개를 확인했습니다.`,
+        message: hasUserMaterials
+          ? `채용공고와 사용자 자료 정리가 완료되었습니다. 파일 ${fileCount}개와 URL ${urlCount}개를 확인했습니다.`
+          : '채용공고 정리가 완료되었습니다.',
       })
     } catch {
       setRequestState({
@@ -215,7 +299,7 @@ function App() {
               <em>선택 사항</em>
             </div>
             <label className="field-label" htmlFor="preferences">추가 희망사항 또는 본인 의견</label>
-            <textarea id="preferences" name="preferences" rows="5" placeholder="예: 서울 근무를 선호하고, AI를 실제 서비스에 적용하는 역할에 관심이 있습니다." />
+            <textarea id="preferences" name="preferences" rows="5" value={preferences} onChange={(event) => setPreferences(event.target.value)} placeholder="예: 서울 근무를 선호하고, AI를 실제 서비스에 적용하는 역할에 관심이 있습니다." />
           </section>
 
           <section className="form-card">
@@ -229,7 +313,9 @@ function App() {
 
           <div className="submit-area">
             <button type="submit" disabled={requestState.status === 'loading'}>
-              {requestState.status === 'loading' ? '요청 전송 중...' : 'JobFit 분석하기'}
+              {requestState.status === 'loading'
+                ? '분석 중...'
+                : hasUserMaterials ? 'JobFit 분석하기' : '채용공고 분석하기'}
               {requestState.status !== 'loading' && <span>→</span>}
             </button>
             <p>입력한 문서는 분석 요청에만 사용됩니다.</p>
@@ -240,6 +326,29 @@ function App() {
             )}
           </div>
         </form>
+
+        {jobPosting?.extraction && (
+          <section className="extraction-results" aria-labelledby="job-posting-title">
+            <div className="results-heading">
+              <div>
+                <span className="eyebrow">JOB POSTING INSPECTION</span>
+                <h2 id="job-posting-title">AI에 전달할 채용공고</h2>
+              </div>
+              <span>{jobPosting.siteName}</span>
+            </div>
+            <p className="results-description">
+              실제 화면에 렌더링된 채용공고에서 업무, 자격요건 등 핵심 본문을 추출했습니다.
+            </p>
+            <div className="extraction-list">
+              <UrlExtractionCard
+                source={jobPosting.extraction}
+                siteName={jobPosting.siteName}
+                officiallySupported={jobPosting.officiallySupported}
+                ocr={jobPosting.ocr}
+              />
+            </div>
+          </section>
+        )}
 
         {(extractedSources.length > 0 || extractedUrls.length > 0) && (
           <section className="extraction-results" aria-labelledby="extraction-title">
@@ -301,58 +410,7 @@ function App() {
                 </article>
               ))}
               {extractedUrls.map((source) => (
-                <article className="extraction-card" key={source.sourceUrl}>
-                  <div className="extraction-summary">
-                    <div>
-                      <span className={`status-dot ${source.status.toLowerCase()}`} />
-                      <strong>{source.pageTitle || source.sourceUrl}</strong>
-                    </div>
-                    <span className="status-label">
-                      {source.status === 'SUCCESS'
-                        ? '본문 추출 완료'
-                        : source.status === 'BLOCKED'
-                          ? '접근 차단'
-                          : source.status === 'AUTH_REQUIRED'
-                            ? '공개 설정 필요'
-                            : '추출 실패'}
-                    </span>
-                  </div>
-                  <a className="source-url" href={source.finalUrl} target="_blank" rel="noreferrer">{source.finalUrl}</a>
-
-                  {source.status === 'SUCCESS' ? (
-                    <>
-                      <div className="extraction-stats">
-                        <div><span>페이지 전체</span><strong>{source.rawCharacterCount.toLocaleString()}자</strong></div>
-                        <div><span>본문 추출 후</span><strong>{source.cleanedCharacterCount.toLocaleString()}자</strong></div>
-                        <div><span>AI 전달 대상</span><strong>{source.analysisCharacterCount.toLocaleString()}자</strong></div>
-                        <div><span>비본문 제외</span><strong>{source.excludedCharacterCount.toLocaleString()}자</strong></div>
-                        <div><span>길이 제한 제외</span><strong>{source.truncatedCharacterCount.toLocaleString()}자</strong></div>
-                      </div>
-                      <div className="rule-list">
-                        {source.removalStats.length > 0
-                          ? source.removalStats.map((stat) => (
-                            <span key={stat.category}>✓ {stat.category} {stat.characterCount.toLocaleString()}자</span>
-                          ))
-                          : <span>명확한 비본문 영역 없음</span>}
-                      </div>
-                      <details>
-                        <summary>정제 내용 상세보기</summary>
-                        <div className="text-comparison">
-                          <div>
-                            <h3>페이지 전체 표시 텍스트</h3>
-                            <pre>{source.rawText}</pre>
-                          </div>
-                          <div>
-                            <h3>핵심 본문 · AI 전달 내용</h3>
-                            <pre>{source.normalizedText}</pre>
-                          </div>
-                        </div>
-                      </details>
-                    </>
-                  ) : (
-                    <p className="extraction-error">{source.errorMessage}</p>
-                  )}
-                </article>
+                <UrlExtractionCard source={source} key={source.sourceUrl} />
               ))}
             </div>
           </section>

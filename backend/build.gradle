@@ -7,6 +7,12 @@ plugins {
 group = 'com.jobfitax'
 version = '0.0.1-SNAPSHOT'
 
+def currentOs = System.getProperty('os.name').toLowerCase()
+def currentArch = System.getProperty('os.arch').toLowerCase()
+def javacppOs = currentOs.contains('mac') ? 'macosx' : currentOs.contains('win') ? 'windows' : 'linux'
+def javacppArch = currentArch.contains('aarch64') || currentArch.contains('arm64') ? 'arm64' : 'x86_64'
+def javacppPlatform = "${javacppOs}-${javacppArch}"
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
@@ -24,6 +30,9 @@ dependencies {
 	implementation 'org.apache.tika:tika-parsers-standard-package:3.3.2'
 	implementation 'org.jsoup:jsoup:1.23.2'
 	implementation 'com.microsoft.playwright:playwright:1.63.0'
+	implementation 'org.bytedeco:tesseract:5.5.3-1.5.14'
+	runtimeOnly "org.bytedeco:tesseract:5.5.3-1.5.14:${javacppPlatform}"
+	runtimeOnly "org.bytedeco:leptonica:1.87.0-1.5.14:${javacppPlatform}"
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

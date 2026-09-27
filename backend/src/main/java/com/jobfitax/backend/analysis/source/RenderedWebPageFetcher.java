@@ -1,7 +1,9 @@
 package com.jobfitax.backend.analysis.source;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
+import com.microsoft.playwright.Frame;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.PlaywrightException;
@@ -58,8 +61,32 @@ public class RenderedWebPageFetcher {
             if (html.length() > MAX_RENDERED_HTML_CHARACTERS) {
                 throw new IllegalArgumentException("렌더링된 페이지 크기가 제한을 초과했습니다.");
             }
-            return new RenderedPage(finalUri, html);
+            List<RenderedFrame> frames = collectFrames(page);
+            return new RenderedPage(finalUri, html, frames);
         }
+    }
+
+    private List<RenderedFrame> collectFrames(Page page) {
+        List<RenderedFrame> frames = new ArrayList<>();
+        int totalCharacters = 0;
+        for (Frame frame : page.frames()) {
+            if (frame == page.mainFrame() || frame.url() == null || frame.url().isBlank()
+                    || "about:blank".equals(frame.url())) {
+                continue;
+            }
+            try {
+                URI frameUri = urlValidator.validate(frame.url());
+                String frameHtml = frame.content();
+                totalCharacters += frameHtml.length();
+                if (totalCharacters > MAX_RENDERED_HTML_CHARACTERS) {
+                    break;
+                }
+                frames.add(new RenderedFrame(frameUri, frameHtml));
+            } catch (IllegalArgumentException | PlaywrightException ignored) {
+                // 공개 주소 검증에 실패하거나 읽을 수 없는 외부 프레임은 사용하지 않는다.
+            }
+        }
+        return List.copyOf(frames);
     }
 
     private void handleRequest(Route route) {
@@ -80,6 +107,9 @@ public class RenderedWebPageFetcher {
         }
     }
 
-    public record RenderedPage(URI uri, String html) {
+    public record RenderedPage(URI uri, String html, List<RenderedFrame> frames) {
+    }
+
+    public record RenderedFrame(URI uri, String html) {
     }
 }
