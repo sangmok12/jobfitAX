@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import JobSearch from './JobSearch'
 
 const MAX_FILES = 10
 const MAX_URLS = 10
@@ -245,6 +246,9 @@ function UrlExtractionCard({ source, siteName, officiallySupported, ocr }) {
 }
 
 function App() {
+  const [activeTab, setActiveTab] = useState('jobfit')
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [jobPostingUrl, setJobPostingUrl] = useState('')
   const [openingState, setOpeningState] = useState('showing')
   const [files, setFiles] = useState([])
   const [sourceUrls, setSourceUrls] = useState([])
@@ -258,6 +262,14 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState(null)
   const [analysisState, setAnalysisState] = useState({ status: 'idle', message: '' })
   const hasUserMaterials = files.length > 0 || sourceUrls.length > 0 || preferences.trim().length > 0
+
+  const openInJobFit = (url) => {
+    setJobPostingUrl(url)
+    setActiveTab('jobfit')
+    setPreparedAnalysis(null)
+    setAnalysisResult(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   useEffect(() => {
     document.body.classList.add('opening-active')
@@ -343,7 +355,7 @@ function App() {
     files.forEach((file) => formData.append('files', file))
     sourceUrls.forEach((url) => formData.append('sourceUrls', url))
     formData.append('preferences', preferences)
-    formData.append('jobPostingUrl', values.get('jobPostingUrl'))
+    formData.append('jobPostingUrl', jobPostingUrl || values.get('jobPostingUrl'))
 
     try {
       const response = await fetch('/api/analyses', {
@@ -419,17 +431,21 @@ function App() {
   return (
     <div className="app-shell">
       {openingState !== 'hidden' && <OpeningScene leaving={openingState === 'leaving'} />}
-      {(requestState.status === 'loading' || analysisState.status === 'loading') && (
-        <LoadingScene message={analysisState.status === 'loading' ? '당신과 기회가 만나는 지점을 찾고 있어요' : undefined} />
+      {(requestState.status === 'loading' || analysisState.status === 'loading' || searchLoading) && (
+        <LoadingScene message={searchLoading ? '당신에게 닿을 새로운 기회들을 모으고 있어요' : analysisState.status === 'loading' ? '당신과 기회가 만나는 지점을 찾고 있어요' : undefined} />
       )}
       <header>
         <a className="brand" href="/" aria-label="JobFit AX 홈">
           <img className="brand-logo" src="/jobfit-logo.svg" alt="" /> JobFit AX
         </a>
-        <span className="badge">V1</span>
+        <nav className="feature-tabs" aria-label="주요 기능">
+          <button className={activeTab === 'jobfit' ? 'active' : ''} type="button" onClick={() => setActiveTab('jobfit')}>JobFit 분석</button>
+          <button className={activeTab === 'search' ? 'active' : ''} type="button" onClick={() => setActiveTab('search')}>채용공고 찾기</button>
+        </nav>
       </header>
 
       <main>
+        {activeTab === 'jobfit' ? <>
         <section className="intro">
           <span className="eyebrow">AI JOB MATCH ANALYSIS</span>
           <h1>내 경험과 채용공고의<br /><strong>진짜 연결점</strong>을 찾아보세요.</h1>
@@ -490,7 +506,7 @@ function App() {
               <em className="required">필수</em>
             </div>
             <label className="field-label" htmlFor="jobPostingUrl">채용공고 URL</label>
-            <input id="jobPostingUrl" name="jobPostingUrl" type="url" placeholder="https://example.com/jobs/123" required />
+            <input id="jobPostingUrl" name="jobPostingUrl" type="url" value={jobPostingUrl} onChange={(event) => setJobPostingUrl(event.target.value)} placeholder="https://example.com/jobs/123" required />
           </section>
 
           <div className="submit-area">
@@ -614,6 +630,7 @@ function App() {
         )}
 
         {analysisResult && <JobFitResults result={analysisResult} />}
+        </> : <JobSearch onAnalyze={openInJobFit} onLoadingChange={setSearchLoading} />}
       </main>
 
       <footer><b>JobFit AX</b><span>나에게 맞는 일을 더 선명하게</span></footer>
