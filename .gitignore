@@ -20,3 +20,6 @@
 
 # Logs
 *.log
+
+# Local reference scripts
+/code.gs

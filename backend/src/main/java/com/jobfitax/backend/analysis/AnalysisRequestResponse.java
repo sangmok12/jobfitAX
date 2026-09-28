@@ -10,6 +10,7 @@ public record AnalysisRequestResponse(
         String status,
         String jobPostingUrl,
         JobPostingExtractionResult jobPosting,
+        String preferences,
         List<String> receivedFiles,
         List<String> receivedUrls,
         List<SourceExtractionResult> extractedSources,

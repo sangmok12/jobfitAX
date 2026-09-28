@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -39,15 +40,18 @@ public class AnalysisController {
     private final DocumentTextExtractor documentTextExtractor;
     private final WebPageTextExtractor webPageTextExtractor;
     private final JobPostingTextExtractor jobPostingTextExtractor;
+    private final JobFitAnalysisService jobFitAnalysisService;
 
     public AnalysisController(
             DocumentTextExtractor documentTextExtractor,
             WebPageTextExtractor webPageTextExtractor,
-            JobPostingTextExtractor jobPostingTextExtractor
+            JobPostingTextExtractor jobPostingTextExtractor,
+            JobFitAnalysisService jobFitAnalysisService
     ) {
         this.documentTextExtractor = documentTextExtractor;
         this.webPageTextExtractor = webPageTextExtractor;
         this.jobPostingTextExtractor = jobPostingTextExtractor;
+        this.jobFitAnalysisService = jobFitAnalysisService;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -61,6 +65,7 @@ public class AnalysisController {
         List<String> safeSourceUrls = sourceUrls == null ? List.of() : sourceUrls;
 
         validateJobPostingUrl(jobPostingUrl);
+        validateUserInput(safeFiles, safeSourceUrls, preferences);
         validateSourceCount(safeFiles, safeSourceUrls);
         safeFiles.forEach(this::validateFile);
         safeSourceUrls.forEach(this::validateSourceUrl);
@@ -81,9 +86,22 @@ public class AnalysisController {
         JobPostingExtractionResult jobPosting = jobPostingTextExtractor.extract(jobPostingUrl);
 
         return new AnalysisRequestResponse(
-                "RECEIVED", jobPostingUrl, jobPosting, receivedFiles, safeSourceUrls,
+                "RECEIVED", jobPostingUrl, jobPosting, preferences, receivedFiles, safeSourceUrls,
                 extractedSources, extractedUrls
         );
+    }
+
+    private void validateUserInput(List<MultipartFile> files, List<String> sourceUrls, String preferences) {
+        boolean hasFile = files.stream().anyMatch(file -> !file.isEmpty());
+        boolean hasUrl = sourceUrls.stream().anyMatch(StringUtils::hasText);
+        if (!hasFile && !hasUrl && !StringUtils.hasText(preferences)) {
+            throw badRequest("적합도를 분석하려면 파일, 공개 URL 또는 직접 작성한 사용자 정보를 하나 이상 추가해 주세요.");
+        }
+    }
+
+    @PostMapping(path = "/job-fit", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public JobFitAnalysisResult analyzeJobFit(@RequestBody JobFitAnalysisRequest request) {
+        return jobFitAnalysisService.analyze(request);
     }
 
     private void validateSourceCount(List<MultipartFile> files, List<String> sourceUrls) {

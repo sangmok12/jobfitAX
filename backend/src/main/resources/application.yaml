@@ -5,3 +5,7 @@ spring:
     multipart:
       max-file-size: 30MB
       max-request-size: 90MB
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  model: ${OPENAI_MODEL:gpt-6-luna}

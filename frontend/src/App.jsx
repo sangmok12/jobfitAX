@@ -27,18 +27,143 @@ function OpeningScene({ leaving }) {
   )
 }
 
-function LoadingScene() {
+function LoadingScene({ message = '당신이 빛날 순간을 발견하고 있어요' }) {
   return (
     <div className="loading-scene" role="status" aria-live="polite">
       <div className="loading-card">
         <div className="loading-brand" aria-label="JobFit AX">JobFit <strong>AX</strong></div>
         <span className="loading-light" aria-hidden="true" />
         <p>
-          당신이 빛날 순간을 발견하고 있어요
+          {message}
           <span className="loading-dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span>
         </p>
       </div>
     </div>
+  )
+}
+
+function ScoreItem({ label, assessment }) {
+  const evaluated = assessment?.status === 'EVALUATED' && assessment.score !== null
+  return (
+    <article className={`score-item${evaluated ? '' : ' unavailable'}`}>
+      <span>{label}</span>
+      <strong>{evaluated ? `${assessment.score}%` : '정보 부족'}</strong>
+      <p>{assessment?.rationale}</p>
+      {assessment?.evidence?.length > 0 && (
+        <details>
+          <summary>판단 근거</summary>
+          <ul>{assessment.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+        </details>
+      )}
+    </article>
+  )
+}
+
+function InsightCards({ title, eyebrow, items, emptyMessage }) {
+  return (
+    <section className="analysis-section">
+      <span className="eyebrow">{eyebrow}</span>
+      <h3>{title}</h3>
+      {items?.length > 0 ? (
+        <div className="insight-grid">
+          {items.map((item, index) => (
+            <article className="insight-card" key={`${item.title}-${index}`}>
+              <h4>{item.title}</h4>
+              <p>{item.description}</p>
+              {(item.userEvidence || item.jobEvidence) && (
+                <div className="evidence-pair">
+                  {item.userEvidence && <span><b>나의 근거</b>{item.userEvidence}</span>}
+                  {item.jobEvidence && <span><b>공고 근거</b>{item.jobEvidence}</span>}
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      ) : <p className="empty-analysis">{emptyMessage}</p>}
+    </section>
+  )
+}
+
+function SimpleListSection({ title, items }) {
+  if (!items?.length) return null
+  return (
+    <div className="list-section">
+      <h4>{title}</h4>
+      <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul>
+    </div>
+  )
+}
+
+function JobFitResults({ result }) {
+  const overallAvailable = result.overallStatus === 'EVALUATED' && result.overallScore !== null
+  const jobInformation = result.jobInformation || {}
+
+  return (
+    <section className="jobfit-results" aria-labelledby="jobfit-result-title">
+      <div className="result-hero">
+        <span className="eyebrow">JOBFIT ANALYSIS</span>
+        <p className="result-company">{result.companyName}</p>
+        <h2 id="jobfit-result-title">{result.position}</h2>
+        <div className={`overall-score${overallAvailable ? '' : ' unavailable'}`}>
+          <span>종합 JobFit 적합도</span>
+          <strong>{overallAvailable ? `${result.overallScore}%` : '산정 불가'}</strong>
+        </div>
+        <p className="result-summary">{result.summary}</p>
+      </div>
+
+      <div className="score-grid">
+        <ScoreItem label="기술 적합도" assessment={result.skill} />
+        <ScoreItem label="경력 적합도" assessment={result.experience} />
+        <ScoreItem label="직무 적합도" assessment={result.role} />
+        <ScoreItem label="희망조건 적합도" assessment={result.preference} />
+      </div>
+
+      <InsightCards title="잘 맞는 점" eyebrow="STRENGTHS" items={result.strengths} emptyMessage="현재 자료에서 뚜렷한 강점을 확인하지 못했습니다." />
+      <InsightCards title="아쉬운 점" eyebrow="GAPS" items={result.gaps} emptyMessage="현재 자료에서 뚜렷한 부족 사항을 확인하지 못했습니다." />
+
+      <section className="analysis-section action-sections">
+        <div>
+          <span className="eyebrow">IF YOU APPLY</span>
+          <h3>지원한다면</h3>
+          <SimpleListSection title="강조하면 좋은 경험" items={result.applicationTips} />
+        </div>
+        <div>
+          <span className="eyebrow">NEXT STEP</span>
+          <h3>추가 준비사항</h3>
+          <SimpleListSection title="지원 전 보완하면 좋은 내용" items={result.preparations} />
+        </div>
+      </section>
+
+      <section className="analysis-section job-info-section">
+        <span className="eyebrow">JOB INFORMATION</span>
+        <h3>채용공고 핵심 정보</h3>
+        <div className="job-info-grid">
+          <SimpleListSection title="담당 업무" items={jobInformation.responsibilities} />
+          <SimpleListSection title="필수 조건" items={jobInformation.requiredQualifications} />
+          <SimpleListSection title="우대 조건" items={jobInformation.preferredQualifications} />
+          <SimpleListSection title="근무 조건" items={jobInformation.employmentConditions} />
+          <SimpleListSection title="확인할 수 없는 정보" items={jobInformation.unknownInformation} />
+        </div>
+      </section>
+
+      {result.dataLimitations?.length > 0 && (
+        <div className="data-limitations">
+          <strong>분석에서 확인이 필요한 부분</strong>
+          <ul>{result.dataLimitations.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
+      )}
+
+      <details className="usage-details">
+        <summary>AI 사용량 상세보기</summary>
+        <div>
+          <span>모델 <b>{result.usage.model}</b></span>
+          <span>입력 <b>{result.usage.inputTokens.toLocaleString()} tokens</b></span>
+          <span>출력 <b>{result.usage.outputTokens.toLocaleString()} tokens</b></span>
+          <span>예상 비용 <b>${result.usage.estimatedCostUsd.toFixed(6)}</b></span>
+        </div>
+      </details>
+      <p className="analysis-disclaimer">입력한 정보와 공개된 채용공고를 기준으로 한 AI 분석이며, 실제 채용 결과를 보장하지 않습니다.</p>
+    </section>
   )
 }
 
@@ -129,6 +254,9 @@ function App() {
   const [jobPosting, setJobPosting] = useState(null)
   const [preferences, setPreferences] = useState('')
   const [requestState, setRequestState] = useState({ status: 'idle', message: '' })
+  const [preparedAnalysis, setPreparedAnalysis] = useState(null)
+  const [analysisResult, setAnalysisResult] = useState(null)
+  const [analysisState, setAnalysisState] = useState({ status: 'idle', message: '' })
   const hasUserMaterials = files.length > 0 || sourceUrls.length > 0 || preferences.trim().length > 0
 
   useEffect(() => {
@@ -195,10 +323,20 @@ function App() {
 
   const submit = async (event) => {
     event.preventDefault()
+    if (!hasUserMaterials) {
+      setRequestState({
+        status: 'error',
+        message: '적합도를 분석하려면 파일, 공개 URL 또는 직접 작성한 사용자 정보를 하나 이상 추가해 주세요.',
+      })
+      return
+    }
     setRequestState({ status: 'loading', message: '' })
     setExtractedSources([])
     setExtractedUrls([])
     setJobPosting(null)
+    setPreparedAnalysis(null)
+    setAnalysisResult(null)
+    setAnalysisState({ status: 'idle', message: '' })
 
     const values = new FormData(event.currentTarget)
     const formData = new FormData()
@@ -214,7 +352,8 @@ function App() {
       })
 
       if (!response.ok) {
-        throw new Error('요청을 처리하지 못했습니다.')
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.detail || '요청을 처리하지 못했습니다.')
       }
 
       const result = await response.json()
@@ -223,24 +362,66 @@ function App() {
       setExtractedSources(result.extractedSources)
       setExtractedUrls(result.extractedUrls)
       setJobPosting(result.jobPosting)
+      setPreparedAnalysis(result)
       setRequestState({
         status: 'success',
-        message: hasUserMaterials
-          ? `채용공고와 사용자 자료 정리가 완료되었습니다. 파일 ${fileCount}개와 URL ${urlCount}개를 확인했습니다.`
-          : '채용공고 정리가 완료되었습니다.',
+        message: `채용공고와 사용자 자료 정리가 완료되었습니다. 파일 ${fileCount}개와 URL ${urlCount}개를 확인했습니다.`,
       })
-    } catch {
+    } catch (error) {
       setRequestState({
         status: 'error',
-        message: '백엔드 서버에 연결할 수 없습니다. 서버 실행 상태를 확인해 주세요.',
+        message: error.message || '백엔드 서버에 연결할 수 없습니다. 서버 실행 상태를 확인해 주세요.',
       })
+    }
+  }
+
+  const runJobFitAnalysis = async () => {
+    if (!preparedAnalysis?.jobPosting?.extraction?.normalizedText) return
+
+    const userMaterials = [
+      ...preparedAnalysis.extractedSources
+        .filter((source) => source.status === 'SUCCESS' && source.normalizedText)
+        .map((source) => ({ name: source.sourceName, text: source.normalizedText })),
+      ...preparedAnalysis.extractedUrls
+        .filter((source) => source.status === 'SUCCESS' && source.normalizedText)
+        .map((source) => ({ name: source.pageTitle || source.sourceUrl, text: source.normalizedText })),
+    ]
+
+    setAnalysisState({ status: 'loading', message: '' })
+    setAnalysisResult(null)
+    try {
+      const response = await fetch('/api/analyses/job-fit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobPostingUrl: preparedAnalysis.jobPostingUrl,
+          jobPostingSite: preparedAnalysis.jobPosting.siteName,
+          jobPostingText: preparedAnalysis.jobPosting.extraction.normalizedText,
+          preferences: preparedAnalysis.preferences,
+          userMaterials,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.detail || 'AI 분석 요청을 처리하지 못했습니다.')
+      }
+
+      const result = await response.json()
+      setAnalysisResult(result)
+      setAnalysisState({ status: 'success', message: 'JobFit 적합도 분석이 완료되었습니다.' })
+      window.setTimeout(() => document.getElementById('jobfit-result-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+    } catch (error) {
+      setAnalysisState({ status: 'error', message: error.message || 'AI 분석 중 오류가 발생했습니다.' })
     }
   }
 
   return (
     <div className="app-shell">
       {openingState !== 'hidden' && <OpeningScene leaving={openingState === 'leaving'} />}
-      {requestState.status === 'loading' && <LoadingScene />}
+      {(requestState.status === 'loading' || analysisState.status === 'loading') && (
+        <LoadingScene message={analysisState.status === 'loading' ? '당신과 기회가 만나는 지점을 찾고 있어요' : undefined} />
+      )}
       <header>
         <a className="brand" href="/" aria-label="JobFit AX 홈">
           <img className="brand-logo" src="/jobfit-logo.svg" alt="" /> JobFit AX
@@ -262,6 +443,7 @@ function App() {
               <em>모두 선택 사항</em>
             </div>
             <div className="source-guide">
+              <p><strong>입력 조건</strong> 파일, 공개 URL, 직접 작성한 정보 중 하나 이상을 입력해 주세요.</p>
               <p><strong>지원 파일</strong> PDF, DOCX, TXT, MD · 파일당 최대 30MB · 최대 10개</p>
               <p><strong>URL 안내</strong> 로그인이나 권한 제한 없이 누구나 볼 수 있는 전체 공개 페이지를 입력해 주세요.</p>
             </div>
@@ -295,11 +477,11 @@ function App() {
 
           <section className="form-card">
             <div className="section-title">
-              <div><span>02</span><h2>희망사항 알려주기</h2></div>
+              <div><span>02</span><h2>나의 정보 및 희망사항</h2></div>
               <em>선택 사항</em>
             </div>
-            <label className="field-label" htmlFor="preferences">추가 희망사항 또는 본인 의견</label>
-            <textarea id="preferences" name="preferences" rows="5" value={preferences} onChange={(event) => setPreferences(event.target.value)} placeholder="예: 서울 근무를 선호하고, AI를 실제 서비스에 적용하는 역할에 관심이 있습니다." />
+            <label className="field-label" htmlFor="preferences">경력, 기술, 프로젝트, 희망 직무와 근무조건을 자유롭게 작성해 주세요.</label>
+            <textarea id="preferences" name="preferences" rows="6" value={preferences} onChange={(event) => setPreferences(event.target.value)} placeholder={'예: Java 백엔드 개발 경력 3년입니다.\nSpring Boot와 MySQL을 사용했고 외부 API 연동 경험이 있습니다.\n서울 또는 원격근무를 선호하며 AI 활용 직무에도 관심이 있습니다.'} />
           </section>
 
           <section className="form-card">
@@ -315,7 +497,7 @@ function App() {
             <button type="submit" disabled={requestState.status === 'loading'}>
               {requestState.status === 'loading'
                 ? '분석 중...'
-                : hasUserMaterials ? 'JobFit 분석하기' : '채용공고 분석하기'}
+                : '자료 정리하고 확인하기'}
               {requestState.status !== 'loading' && <span>→</span>}
             </button>
             <p>입력한 문서는 분석 요청에만 사용됩니다.</p>
@@ -415,6 +597,23 @@ function App() {
             </div>
           </section>
         )}
+
+        {preparedAnalysis && (
+          <section className="final-analysis-action">
+            <span className="eyebrow">READY TO ANALYZE</span>
+            <h2>정리된 내용으로 적합도를 분석할까요?</h2>
+            <p>위에 표시된 사용자 자료와 채용공고만 AI에 전달합니다. 정보가 없는 항목은 점수 대신 정보 부족으로 표시합니다.</p>
+            <button type="button" onClick={runJobFitAnalysis} disabled={analysisState.status === 'loading' || preparedAnalysis.jobPosting?.extraction?.status !== 'SUCCESS'}>
+              위 정리된 내용으로 적합도 분석 <span>→</span>
+            </button>
+            {preparedAnalysis.jobPosting?.extraction?.status !== 'SUCCESS' && (
+              <div className="notice error">채용공고 본문을 확인하지 못해 적합도 분석을 시작할 수 없습니다.</div>
+            )}
+            {analysisState.message && <div className={`notice ${analysisState.status}`}>{analysisState.message}</div>}
+          </section>
+        )}
+
+        {analysisResult && <JobFitResults result={analysisResult} />}
       </main>
 
       <footer><b>JobFit AX</b><span>나에게 맞는 일을 더 선명하게</span></footer>
