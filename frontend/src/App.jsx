@@ -5,6 +5,15 @@ import { apiUrl } from './api'
 
 const MAX_FILES = 10
 const MAX_URLS = 10
+const DEFAULT_PROFILE = `한국산업기술진흥원 대외시스템팀에서 2년 5개월 동안 Java 기반 웹서비스를 운영·개선했습니다. 대표 홈페이지와 국가기술은행을 주로 담당했으며, 총 10개의 대외 웹서비스 유지보수, 데이터 관리, 사용자 문의 대응, 장애 분석과 보안 개선 업무를 수행했습니다.
+
+Java, JSP, Spring MVC, 전자정부프레임워크를 사용해 서버 기능을 개발했고 JavaScript, jQuery, HTML, CSS, AJAX로 화면을 개선했습니다. PostgreSQL, Oracle, Tibero, MSSQL, MySQL 환경에서 SQL과 데이터를 관리한 경험이 있습니다.
+
+주요 경험으로는 DB 암호화 방식 변경에 따른 SQL 전수 점검과 수정, 본인인증 및 접근 권한 검증 강화, XSS 방지, 개인정보 검출 솔루션과 외부 API 연동, 엑셀 다운로드를 XLSX 방식으로 변경해 약 6만 5천 행 제한을 해결한 작업이 있습니다. 서버 로그와 Java·SQL 소스를 분석해 운영 장애의 원인을 찾고 조치한 경험도 있습니다.
+
+최근에는 Java·Spring Boot·React 기반의 JobFit AX를 개발했습니다. 잡코리아와 사람인의 서로 다른 검색 조건을 공통 데이터 구조로 변환해 통합 검색을 구현하고, GPT Luna를 활용해 사용자 경력과 채용공고의 적합도를 분석했습니다. Playwright와 OCR을 이용한 공고 추출, 불필요한 본문 정제를 통한 AI 토큰 절감, 구조화된 JSON 응답 검증도 구현했습니다.
+
+Java와 Spring 기반의 웹·백엔드 개발 직무를 희망하며, 기존 시스템 운영 경험과 API·데이터·AI 활용 경험을 바탕으로 서비스의 안정성과 사용자 편의성을 함께 개선하고 싶습니다.`
 const MAX_FILE_SIZE = 30 * 1024 * 1024
 const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'txt', 'md']
 
@@ -257,7 +266,7 @@ function App() {
   const [extractedSources, setExtractedSources] = useState([])
   const [extractedUrls, setExtractedUrls] = useState([])
   const [jobPosting, setJobPosting] = useState(null)
-  const [preferences, setPreferences] = useState('')
+  const [preferences, setPreferences] = useState(DEFAULT_PROFILE)
   const [requestState, setRequestState] = useState({ status: 'idle', message: '' })
   const [preparedAnalysis, setPreparedAnalysis] = useState(null)
   const [analysisResult, setAnalysisResult] = useState(null)
@@ -498,6 +507,7 @@ function App() {
               <em>선택 사항</em>
             </div>
             <label className="field-label" htmlFor="preferences">경력, 기술, 프로젝트, 희망 직무와 근무조건을 자유롭게 작성해 주세요.</label>
+            <p className="prefill-guide">테스트를 위해 지원자의 경력과 프로젝트 정보가 미리 입력되어 있습니다. 내용을 수정하거나 그대로 분석할 수 있습니다.</p>
             <textarea id="preferences" name="preferences" rows="6" value={preferences} onChange={(event) => setPreferences(event.target.value)} placeholder={'예: Java 백엔드 개발 경력 3년입니다.\nSpring Boot와 MySQL을 사용했고 외부 API 연동 경험이 있습니다.\n서울 또는 원격근무를 선호하며 AI 활용 직무에도 관심이 있습니다.'} />
           </section>
 

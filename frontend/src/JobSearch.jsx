@@ -120,11 +120,17 @@ function JobSearch({ onAnalyze, onLoadingChange }) {
           {result.limited && <p className="limit-notice">검색 결과가 많아 최신 공고 500개만 표시합니다. 조건을 더 구체적으로 선택하면 정확하게 찾을 수 있습니다.</p>}
           {visibleItems.length ? <div className="job-result-list">{visibleItems.map((item) => (
             <article className="job-result-card" key={`${item.source}-${item.postingId}`}>
-              <div className="job-card-top"><span className={`source-chip ${item.source.toLowerCase()}`}>{item.sourceLabel}</span><span>{item.registeredDate ? `${item.registeredDate} 등록` : ''}</span></div>
-              <p className="job-company">{item.companyName}</p><h3>{item.title}</h3>
+              <div className="job-card-top">
+                <span className={`source-chip ${item.source.toLowerCase()}`}>{item.sourceLabel}</span>
+                <div className="job-card-dates"><span>{item.registeredDate || '등록일 미정'} ~ {item.deadline || '미정'}</span></div>
+              </div>
+              <p className="job-company">{item.companyName}</p>
+              <div className="job-title-row">
+                <h3><a href={item.url} target="_blank" rel="noreferrer">{item.title}</a></h3>
+                <button type="button" onClick={() => onAnalyze(item.url)}>JobFit 분석</button>
+              </div>
               <div className="job-meta">{item.locations?.length > 0 && <span>📍 {item.locations.join(', ')}</span>}{item.career && <span>{item.career}</span>}{item.education && <span>{item.education}</span>}{item.employmentTypes?.length > 0 && <span>{item.employmentTypes.join(' · ')}</span>}</div>
               {item.skills?.length > 0 && <div className="skill-tags">{item.skills.slice(0, 8).map((skill) => <span key={skill}>{skill}</span>)}</div>}
-              <div className="job-card-bottom"><span>{item.deadline ? `마감 ${item.deadline}` : '마감일 미정'}</span><div><a href={item.url} target="_blank" rel="noreferrer">원문 보기</a><button type="button" onClick={() => onAnalyze(item.url)}>JobFit 분석</button></div></div>
             </article>
           ))}</div> : <p className="empty-search">조건에 맞는 공고를 찾지 못했습니다.</p>}
           {totalPages > 1 && <div className="pagination"><button disabled={page === 1} onClick={() => setPage((value) => value - 1)}>이전</button><span>{page} / {totalPages}</span><button disabled={page === totalPages} onClick={() => setPage((value) => value + 1)}>다음</button></div>}
