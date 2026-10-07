@@ -6,6 +6,9 @@ spring:
       max-file-size: 30MB
       max-request-size: 90MB
 
+server:
+  port: ${PORT:8080}
+
 openai:
   api-key: ${OPENAI_API_KEY:}
   model: ${OPENAI_MODEL:gpt-6-luna}

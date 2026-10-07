@@ -1,0 +1,9 @@
+.git
+.gradle
+**/build
+**/node_modules
+**/dist
+output
+tmp
+.DS_Store
+code.gs

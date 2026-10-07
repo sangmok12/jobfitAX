@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import JobSearch from './JobSearch'
+import { apiUrl } from './api'
 
 const MAX_FILES = 10
 const MAX_URLS = 10
@@ -358,7 +359,7 @@ function App() {
     formData.append('jobPostingUrl', jobPostingUrl || values.get('jobPostingUrl'))
 
     try {
-      const response = await fetch('/api/analyses', {
+      const response = await fetch(apiUrl('/api/analyses'), {
         method: 'POST',
         body: formData,
       })
@@ -402,7 +403,7 @@ function App() {
     setAnalysisState({ status: 'loading', message: '' })
     setAnalysisResult(null)
     try {
-      const response = await fetch('/api/analyses/job-fit', {
+      const response = await fetch(apiUrl('/api/analyses/job-fit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

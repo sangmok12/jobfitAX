@@ -23,3 +23,9 @@
 
 # Local reference scripts
 /code.gs
+
+# Generated portfolio artifacts
+/output/
+/tmp/
+
+/.openai-key

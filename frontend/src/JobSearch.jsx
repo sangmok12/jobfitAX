@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import './JobSearch.css'
+import { apiUrl } from './api'
 
 const CAREERS = [['ANY', '경력 전체'], ['NEWCOMER', '신입'], ['EXPERIENCED', '경력'], ['NO_PREFERENCE', '경력무관']]
 const EDUCATIONS = [['ANY', '학력 전체'], ['NO_PREFERENCE', '학력무관'], ['HIGH_SCHOOL', '고졸 이상'], ['COLLEGE', '전문대졸 이상'], ['UNIVERSITY', '대졸 이상'], ['MASTER', '석사 이상'], ['DOCTOR', '박사']]
@@ -20,7 +21,7 @@ function JobSearch({ onAnalyze, onLoadingChange }) {
   const [page, setPage] = useState(1)
 
   useEffect(() => {
-    fetch('/api/job-search/regions').then((response) => {
+    fetch(apiUrl('/api/job-search/regions')).then((response) => {
       if (!response.ok) throw new Error()
       return response.json()
     }).then(setRegions).catch(() => setState({ status: 'error', message: '지역 정보를 불러오지 못했습니다.' }))
@@ -50,7 +51,7 @@ function JobSearch({ onAnalyze, onLoadingChange }) {
     setState({ status: 'loading', message: '' })
     setResult(null)
     try {
-      const response = await fetch('/api/job-search', {
+      const response = await fetch(apiUrl('/api/job-search'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           keyword: keyword.trim(), regionIds, careerType,
